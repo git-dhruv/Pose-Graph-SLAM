@@ -10,9 +10,9 @@ def readG2O(file):
     with open(file, 'r') as f:
         for line in f:
             line = line.split()
-            if "VERTEX" in line:
+            if "VERTEX_SE2" in line:
                 # VERTEX_SE2 i x y theta
-                vertices.append(line[1:])
+                vertices.append(line[2:])
             elif "EDGE_SE2" in line:
                 # EDGE_SE2 i j x y theta info(x, y, theta)
                 edges.append(line[1:])
