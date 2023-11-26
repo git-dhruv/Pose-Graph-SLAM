@@ -29,3 +29,7 @@ Factors: Factors model the relationships between poses. They include prior facto
 
 
 ## Results
+<img src="results/2dbatch.png" width="200">
+<img src="results/3dbatch.png" width="200">
+<img src="results/2dinc.png" width="200">
+<img src="results/3dinc.png" width="200">
