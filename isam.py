@@ -4,7 +4,6 @@ from gtsam.utils import plot
 import matplotlib.pyplot as plt
 import numpy as np
 
-
 def iSAM2d(file, debug = 0):
     vertex, edges = utils.readG2O(file)
 
@@ -21,14 +20,18 @@ def iSAM2d(file, debug = 0):
     for pose in vertex:
         
         poseNum = int(pose[0])
+        #Add a prior if we are on first node
         if(poseNum==0):
             _, x,y,theta = pose
             graph.add(gtsam.PriorFactorPose2(0, gtsam.Pose2(x,y,theta), priorModel))
             initial_estimate.insert(poseNum, gtsam.Pose2(x,y,theta))
+
         else:
+            #Prev Pose is the initial estimate
             prevPose = result.atPose2(poseNum - 1)
             initial_estimate.insert(poseNum, prevPose)
             for edge in edges:
+                #Add edges that connect from curr node
                 if(int(edge[1]) == poseNum):
                     id_e1, id_e2, dx, dy, dtheta, *info = edge
                     id_e1 = id_e1.astype(np.int32)

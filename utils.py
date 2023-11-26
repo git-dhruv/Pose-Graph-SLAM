@@ -10,11 +10,13 @@ def readG2O(file):
     edges = []
     with open(file, 'r') as f:
         for line in f:
-            line = line.split()
-            if "VERTEX_SE2" in line:
+            
+            if "VERTEX" in line:
+                line = line.split()
                 # VERTEX_SE2 i x y theta
                 vertices.append(line[1:])
-            elif "EDGE_SE2" in line:
+            elif "EDGE" in line:
+                line = line.split()
                 # EDGE_SE2 i j x y theta info(x, y, theta)
                 edges.append(line[1:])
     return np.array(vertices, dtype=np.float64), np.array(edges, dtype=np.float64)
