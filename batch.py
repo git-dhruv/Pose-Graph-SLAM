@@ -11,7 +11,7 @@ def batchOptimization_2d(file, debug = 0):
     graph, initial = gtsam.readG2o(file, is3D=False)
 
     # Add a priori
-    priorModel = gtsam.noiseModel.Diagonal.Variances(gtsam.Point3(1e-2, 1e-2, 1e-8))
+    priorModel = gtsam.noiseModel.Diagonal.Variances(gtsam.Point3(1e-10,1e-10,1e-10))
     # Key, Prior Value, Noise Model
     graph.add(gtsam.PriorFactorPose2(0, gtsam.Pose2(), priorModel))
 
@@ -19,6 +19,7 @@ def batchOptimization_2d(file, debug = 0):
     
     params = gtsam.GaussNewtonParams()
     params.setVerbosity("TERMINATED")
+    
     params.setAbsoluteErrorTol(-1e+10)
     params.setRelativeErrorTol(-1e+3)
 
@@ -38,7 +39,7 @@ def batchOptimization_2d(file, debug = 0):
 
     finalPose = gtsam.utilities.extractPose2(result)
     initialPose = utils.readG2O(file)[0]
-    initialPose = np.array(initialPose, dtype=np.float64)
+    initialPose = np.array(initialPose, dtype=np.float64)[:,1:]
     return finalPose, initialPose
 
 def plotPoses(pose1, pose2):
