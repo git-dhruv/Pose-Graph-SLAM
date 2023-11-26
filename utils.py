@@ -4,6 +4,7 @@
 @brief: All Utility functions for the rest of the code
 """
 import numpy as np
+import matplotlib.pyplot as plt
 
 def readG2O(file):
     vertices = []
@@ -24,8 +25,24 @@ def readG2O(file):
 def fullCovMatrix():
     pass
 
-def parseSE2Poses():
-    pass
+def plotPoses(pose1, pose2, dim = 2):
+    if dim == 2:
+        plt.plot(pose1[:,0], pose1[:,1], ".", label='Optimized')
+        plt.plot(pose2[:,0], pose2[:,1], "--", label='Raw')
+        plt.show()
+    else:
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.plot(pose1[:,0], pose1[:,1], pose1[:,2], label='Optimized')
+        ax.plot(pose2[:,0], pose2[:,1], pose2[:,2], label='Raw')
+        ax.set_xlabel('X-axis')
+        ax.set_ylabel('Y-axis')
+        ax.set_zlabel('Z-axis')
+        ax.legend()
+
+        # Show the plot
+        plt.show()
+
 
 def construct_info_mat(info_v:list)->np.ndarray:
     """
@@ -55,6 +72,4 @@ def construct_info_mat(info_v:list)->np.ndarray:
     return info_m
 
 
-if __name__ == '__main__':
-    readG2O(r"data/input_INTEL_g2o.g2o")    
 

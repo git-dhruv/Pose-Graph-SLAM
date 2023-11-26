@@ -64,19 +64,14 @@ def batchOptimization_3d(file, debug = 0):
     print("initial error = ", graph.error(initial))
     print("final error = ", graph.error(result))
 
-    finalPose = gtsam.utilities.extractPose3(result)
+    finalPose = gtsam.utilities.extractPose3(result)[:,-3:]
     initialPose = utils.readG2O(file)[0]
     initialPose = np.array(initialPose, dtype=np.float64)[:,1:]
     return finalPose, initialPose
 
 
-def plotPoses(pose1, pose2):
-    plt.plot(pose1[:,0], pose1[:,1], ".")
-    plt.plot(pose2[:,0], pose2[:,1], "--")
-    plt.show()
-
 # pose1, pose2 = batchOptimization_2d("data/input_INTEL_g2o.g2o", debug=0)
 # plotPoses(pose1, pose2)
 
 pose1, pose2 = batchOptimization_3d("data/parking-garage.g2o", debug=0)
-# plotPoses(pose1, pose2)
+utils.plotPoses(pose1, pose2, dim = 3)
