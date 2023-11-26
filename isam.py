@@ -45,6 +45,15 @@ def iSAM2d(file, debug = 0):
         result = isam.calculateEstimate()
         graph.resize(0)
         initial_estimate.clear()
+        if debug:
+            if poseNum<200 or poseNum%10==0:
+                resultPoses = gtsam.utilities.extractPose2(result)
+                plt.plot(resultPoses[:,0], resultPoses[:,1], "--")
+                plt.xlim([-15, 15])
+                plt.ylim([-25, 10])
+                # plt.show()
+                plt.savefig(f"{poseNum}.png")
+                plt.close()
 
     resultPoses = gtsam.utilities.extractPose2(result)
     return resultPoses, vertex[:,1:]
@@ -96,7 +105,18 @@ def iSAM3d(file, debug = 0):
     return resultPoses, vertex[:,1:]
 
 
-# pose1, pose2 = iSAM2d("data/input_INTEL_g2o.g2o", debug=0)
+pose1, pose2 = iSAM2d("data/input_INTEL_g2o.g2o", debug=1)
 # utils.plotPoses(pose1, pose2)
-pose1, pose2 = iSAM3d("data/parking-garage.g2o", debug=0)
-utils.plotPoses(pose1, pose2, dim = 3)
+# pose1, pose2 = iSAM3d("data/parking-garage.g2o", debug=0)
+# utils.plotPoses(pose1, pose2, dim = 3)
+
+
+import imageio
+images = []
+for i in range(1200):
+    filename = str(i)+".png"
+    try:
+        images.append(imageio.imread(filename))
+    except:
+        pass
+imageio.mimsave('movie.gif', images)

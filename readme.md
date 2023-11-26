@@ -1,4 +1,8 @@
 # SLAM Optimization with GTSAM
+<p align="center">
+  <img src="results/gif2dcrop.gif" alt="Pay for the internet">
+</p>
+
 This project focuses on Simultaneous Localization and Mapping (SLAM) using the GTSAM library. 
 
 ## Project Structure
