@@ -6,7 +6,45 @@ import numpy as np
 
 
 def iSAM2d(file, debug = 0):
-    pass
+    vertex, edges = utils.readG2O(file)
+
+    params = gtsam.ISAM2Params()
+    # Only relinearize variables whose linear delta magnitude is greater than this threshold
+    params.setRelinearizeThreshold(0.1)
+    isam = gtsam.ISAM2(params)
+
+    priorModel = gtsam.noiseModel.Diagonal.Variances(gtsam.Point3(1e-6, 1e-6, 1e-8))
+
+    graph = gtsam.NonlinearFactorGraph()
+    initial_estimate = gtsam.Values()
+
+    for pose in vertex:
+        
+        poseNum = int(pose[0])
+        if(poseNum==0):
+            _, x,y,theta = pose
+            graph.add(gtsam.PriorFactorPose2(0, gtsam.Pose2(x,y,theta), priorModel))
+            initial_estimate.insert(poseNum, gtsam.Pose2(x,y,theta))
+        else:
+            prevPose = result.atPose2(poseNum - 1)
+            initial_estimate.insert(poseNum, prevPose)
+            for edge in edges:
+                if(int(edge[1]) == poseNum):
+                    id_e1, id_e2, dx, dy, dtheta, *info = edge
+                    id_e1 = id_e1.astype(np.int32)
+                    id_e2 = id_e2.astype(np.int32)                    
+                    info_m = utils.construct_info_mat(info)
+                    noise_model = gtsam.noiseModel.Gaussian.Information(info_m)
+                    graph.add(gtsam.BetweenFactorPose2(id_e1, id_e2 , gtsam.Pose2(dx, dy, dtheta), noise_model))
+
+        # Perform incremental update to iSAM2's internal Bayes tree, optimizing only the affected variables.
+        isam.update(graph, initial_estimate)
+        result = isam.calculateEstimate()
+        graph.resize(0)
+        initial_estimate.clear()
+
+    resultPoses = gtsam.utilities.extractPose2(result)
+    return resultPoses, vertex[:,1:]
 
 
 def plotPoses(pose1, pose2):
