@@ -49,6 +49,54 @@ def iSAM2d(file, debug = 0):
     resultPoses = gtsam.utilities.extractPose2(result)
     return resultPoses, vertex[:,1:]
 
+def iSAM3d(file, debug = 0):
+    vertex, edges = utils.readG2O(file)
 
-pose1, pose2 = iSAM2d("data/input_INTEL_g2o.g2o", debug=0)
-utils.plotPoses(pose1, pose2)
+    params = gtsam.ISAM2Params()
+    params.setRelinearizeThreshold(0.1)
+    isam = gtsam.ISAM2(params)
+
+    ## Build the Graph ##
+    graph = gtsam.NonlinearFactorGraph()
+    initial_estimate = gtsam.Values()
+
+    for pose in vertex:
+        poseNum = int(pose[0])
+        #Add a prior if we are on first node
+        if(poseNum==0):
+            priorModel = gtsam.noiseModel.Diagonal.Variances(np.array([1e-6, 1e-6, 1e-6, 1e-4, 1e-4, 1e-4]))
+            _,x,y,z,q1,q2,q3,q0 = pose
+            rotation = gtsam.Rot3(q0,q1,q2,q3)
+            trans = gtsam.Point3(x,y,z)
+            absPose = gtsam.Pose3(rotation,trans)
+
+            graph.add( gtsam.PriorFactorPose3(0, absPose, priorModel)  )
+            initial_estimate.insert(poseNum, absPose)
+        #Rest of the Poses and vertices
+        else:
+            prev_pose = result.atPose3(poseNum - 1)
+            initial_estimate.insert(poseNum, prev_pose)
+            for edge in edges:
+                if int(edge[1]) == poseNum:
+                    id_e1, id_e2, x,y,z,q1,q2,q3,q0, *info = edge
+                    id_e1 = id_e1.astype(np.int32)
+                    id_e2 = id_e2.astype(np.int32)                    
+                    rotation = gtsam.Rot3(q0,q1,q2,q3)
+                    trans = gtsam.Point3(x,y,z)
+                    absPose = gtsam.Pose3(rotation,trans)
+                    info_m = utils.construct_info_mat(info)
+                    noise_model = gtsam.noiseModel.Gaussian.Information(info_m)
+                    graph.add(gtsam.BetweenFactorPose3(id_e1, id_e2 , absPose, noise_model))
+
+        isam.update(graph, initial_estimate)
+        result = isam.calculateEstimate()
+        graph.resize(0)
+        initial_estimate.clear()
+    resultPoses = gtsam.utilities.extractPose3(result)[:,-3:]
+    return resultPoses, vertex[:,1:]
+
+
+# pose1, pose2 = iSAM2d("data/input_INTEL_g2o.g2o", debug=0)
+# utils.plotPoses(pose1, pose2)
+pose1, pose2 = iSAM3d("data/parking-garage.g2o", debug=0)
+utils.plotPoses(pose1, pose2, dim = 3)
