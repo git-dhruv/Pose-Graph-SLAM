@@ -64,8 +64,9 @@ class slam:
         ip1_T_i = self.icp(self.clouds[i1], self.clouds[i2], self.prevPose)
         i_T_ip1 = ip1_T_i.inverse()
         self.graph.add(gtsam.BetweenFactorPose3(i1, i2, i_T_ip1, ICP_NOISE))
-        self.initial_estimate.insert(i2, self.prevPose.compose(ip1_T_i))
+        self.initial_estimate.insert(i2, ip1_T_i)
         self.prevPose = ip1_T_i
+
 
     def runISAM(self):
         T = self.readGT()
