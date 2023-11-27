@@ -19,6 +19,7 @@ import helpers
 import tqdm
 from scipy.spatial.transform import Rotation
 import teaserpp_python
+import open3d as o3d
 
 # Module constants
 # CONSTANT_1 = "value"
@@ -58,13 +59,12 @@ class slam:
 
 
 
-    def addEdge(self, i1, i2, skip=False):
+    def addEdge(self, i1, i2):
         ICP_NOISE = gtsam.noiseModel.Diagonal.Sigmas(np.array([1e-6, 1e-6, 1e-6, 1e-4, 1e-4, 1e-4]))
         ip1_T_i = self.icp(self.clouds[i1], self.clouds[i2], self.prevPose)
         i_T_ip1 = ip1_T_i.inverse()
         self.graph.add(gtsam.BetweenFactorPose3(i1, i2, i_T_ip1, ICP_NOISE))
-        if not skip:
-            self.initial_estimate.insert(i2, self.prevPose.compose(ip1_T_i))
+        self.initial_estimate.insert(i2, self.prevPose.compose(ip1_T_i))
         self.prevPose = ip1_T_i
 
     def runISAM(self):
@@ -84,13 +84,13 @@ class slam:
         self.prevPose = gtsam.Pose3()
 
 
-        for i in tqdm.tqdm(range(len(self.clouds)-1)):
-            self.addEdge(i, i+1, skip=False)
-            if i%10==-1:
-                self.addEdge(i, i+10, skip=True)
+        for i in tqdm.tqdm(range(len(self.clouds)-1  ) ):
+            self.addEdge(i, i+1)
             isam.update(self.graph, self.initial_estimate)
             self.graph.resize(0)
             self.initial_estimate.clear()
+            result = isam.calculateEstimate()
+            # self.pltlibViz(i, result)
 
             if i==50:
                 result = isam.calculateEstimate()
@@ -102,19 +102,19 @@ class slam:
                 print(rotError/50, transError/50)
 
         result = isam.calculateEstimate()
-        # self.visualizeResult(result)
-        self.createMap(result)
+        # self.pltlibViz(i, result)
+        self.visualizeResult(result)
+        # self.createMap(result, 100)
 
     def visualizeResult(self, result):
         poses_cloud = np.array([[], [], []])
         for i in range(len(self.clouds)):
             poses_cloud = np.hstack([poses_cloud, np.array([[result.atPose3(i).x()], [result.atPose3(i).y()], [result.atPose3(i).z()]])])
         
-
         init_car_pose = gtsam.Pose3(gtsam.Rot3(0.9982740, -0.0572837,  0.0129474, 0.0575611,  0.9980955, -0.0221840, -0.0116519,  0.0228910,  0.9996701),
                                     gtsam.Point3(-263.9464864482589, 2467.3015467381383, -19.374652610889633))
 
-        driving.visualize_clouds([poses_cloud, init_car_pose.transformFrom(self.clouds[0])], show_grid_lines=True, cloud_colors=['#ffa500', '#FFFFFF'])
+        driving.visualize_clouds([poses_cloud, init_car_pose.transformFrom(self.clouds[0])], show_grid_lines=True, cloud_colors=['#FFFFFF', '#ffa500'])
 
     def icp(self, clouda, cloudb, initial_transform=gtsam.Pose3(), max_iterations=25):
 
@@ -122,27 +122,21 @@ class slam:
         transform_A = est.transformFrom(clouda)
         cloudB_closest = helpers.assign_closest_pairs_KDTree(transform_A, cloudb)
 
-        # self.solver = teaserpp_python.RobustRegistrationSolver(self.solver_params)
-        # self.solver.solve( clouda[:,:2000], cloudB_closest[:,:2000])
-        # solution = self.solver.getSolution()
-        # return gtsam.Pose3(gtsam.Rot3(solution.rotation), solution.translation).inverse()
 
+        source_cloud = o3d.geometry.PointCloud()
+        source_cloud.points = o3d.utility.Vector3dVector(clouda.T)
+        target_cloud = o3d.geometry.PointCloud()
+        target_cloud.points = o3d.utility.Vector3dVector(cloudB_closest.T)
+        # Perform ICP registration
+        reg_p2p = o3d.pipelines.registration.registration_icp(
+        source_cloud, target_cloud, 100, est.matrix(),
+        o3d.pipelines.registration.TransformationEstimationPointToPoint(),
+        o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=2000,relative_fitness=1e-6, 
+                                                        relative_rmse=1e-6))
+        #Got the result
+        transformation_matrix = reg_p2p.transformation
+        return gtsam.Pose3(gtsam.Rot3(transformation_matrix[:3,:3]), transformation_matrix[:3,-1])
 
-
-
-
-        itr = 0
-        est =initial_transform
-        prevEst = initial_transform
-        while itr<max_iterations:
-            transform_A = est.transformFrom(clouda)
-            cloudB_closest = helpers.assign_closest_pairs_KDTree(transform_A, cloudb)
-            est = gtsam.Pose3.Align(clouda, cloudB_closest).inverse()
-            if itr>1 and est.equals(prevEst, 1e-2):
-                break
-            prevEst = est
-            itr+=1
-        return est
     
     def createMap(self, result, idx):
         transforms = []
@@ -165,6 +159,15 @@ class slam:
         for i in range((50)):
             transforms.append(partial_result.atPose3(i))
         return transforms
+    
+    def pltlibViz(self, N, result):
+        # self.clouds -> 3xN (transformed clouds)
+        for i in range(N):
+            pose = result.atPose3(i)
+            plt.plot( pose.transformFrom(self.clouds[i])[0,:],pose.transformFrom(self.clouds[i])[1,:], 'k.' , markersize=0.1)
+            translation = pose.matrix()[:3,-1]
+            plt.plot(translation[0],translation[1], 'r*')
+        plt.show()
 
 
 def main()->None:    
