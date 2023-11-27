@@ -18,6 +18,7 @@ def iSAM2d(file, debug = 0):
     initial_estimate = gtsam.Values()
 
     for pose in vertex:
+        print(initial_estimate)
         
         poseNum = int(pose[0])
         #Add a prior if we are on first node
@@ -30,6 +31,7 @@ def iSAM2d(file, debug = 0):
             #Prev Pose is the initial estimate
             prevPose = result.atPose2(poseNum - 1)
             initial_estimate.insert(poseNum, prevPose)
+            print(prevPose)
             for edge in edges:
                 #Add edges that connect from curr node
                 if(int(edge[1]) == poseNum):
@@ -45,7 +47,10 @@ def iSAM2d(file, debug = 0):
         result = isam.calculateEstimate()
         graph.resize(0)
         initial_estimate.clear()
+        if poseNum==5:
+            break
         if debug:
+
             if poseNum<200 or poseNum%10==0:
                 resultPoses = gtsam.utilities.extractPose2(result)
                 plt.plot(resultPoses[:,0], resultPoses[:,1], "--")
@@ -105,7 +110,7 @@ def iSAM3d(file, debug = 0):
     return resultPoses, vertex[:,1:]
 
 
-pose1, pose2 = iSAM2d("data/input_INTEL_g2o.g2o", debug=1)
+pose1, pose2 = iSAM2d("data/input_INTEL_g2o.g2o", debug=0)
 # utils.plotPoses(pose1, pose2)
 # pose1, pose2 = iSAM3d("data/parking-garage.g2o", debug=0)
 # utils.plotPoses(pose1, pose2, dim = 3)
